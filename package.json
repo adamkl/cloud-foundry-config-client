@@ -4,6 +4,9 @@
   "description": "A basic cloud foundry config client for Node.js",
   "main": "./lib/js/cloudFoundryConfigClient.js",
   "types": "./lib/types/cloudFoundryConfigClient.d.ts",
+  "engines": {
+    "node": ">=8"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/adamkl/cloud-foundry-config-client"
