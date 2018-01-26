@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "lib": ["esnext"],
+    "module": "commonjs",
+    "outDir": "dist",
+    "strictNullChecks": true,
+    "target": "es5",
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true
+  },
+  "compileOnSave": false,
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

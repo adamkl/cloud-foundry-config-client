@@ -1,0 +1,46 @@
+{
+  "name": "cloud-foundry-config-client",
+  "version": "0.0.8",
+  "description": "A basic cloud foundry config client for Node.js",
+  "main": "./lib/js/cloudFoundryConfigClient.js",
+  "types": "./lib/types/cloudFoundryConfigClient.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adamkl/cloud-foundry-config-client"
+  },
+  "author": "Adam Kreczko-Lenner",
+  "license": "MIT",
+  "scripts": {
+    "build": "gulp build",
+    "rebuild": "gulp rebuild",
+    "scrub": "gulp scrub",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "js-yaml": "^3.10.0",
+    "request": "^2.82.0",
+    "request-promise-native": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^20.0.8",
+    "@types/node": "^8.0.28",
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^3.2.1",
+    "jest": "^21.0.2",
+    "merge2": "^1.2.0",
+    "run-sequence": "^2.1.0",
+    "ts-jest": "^21.0.0",
+    "typescript": "^2.5.2"
+  },
+  "jest": {
+    "coverageDirectory": "<rootDir>/coverage",
+    "transform": {
+      "^.+\\.tsx?$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(tsx?|jsx?)$",
+    "moduleFileExtensions": ["ts", "tsx", "js", "json", "jsx"]
+  }
+}
