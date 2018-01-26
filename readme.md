@@ -1,4 +1,4 @@
-# cloud-foundry-config-client
+# cloud-foundry-config-client [![CircleCI](https://circleci.com/gh/adamkl/cloud-foundry-config-client.svg?style=svg)](https://circleci.com/gh/adamkl/cloud-foundry-config-client)
 
 A simple client for pulling configuration from a PCF Spring Cloud Config Server
 
