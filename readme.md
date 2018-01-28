@@ -1,4 +1,6 @@
-# cloud-foundry-config-client [![CircleCI](https://circleci.com/gh/adamkl/cloud-foundry-config-client.svg?style=svg)](https://circleci.com/gh/adamkl/cloud-foundry-config-client)
+# cloud-foundry-config-client 
+[![npm version](https://badge.fury.io/js/cloud-foundry-config-client.svg)](https://badge.fury.io/js/cloud-foundry-config-client)
+[![Build Status](https://travis-ci.org/adamkl/cloud-foundry-config-client.svg?branch=master)](https://travis-ci.org/adamkl/cloud-foundry-config-client)
 
 A simple client for pulling configuration from a PCF Spring Cloud Config Server
 

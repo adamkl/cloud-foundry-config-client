@@ -1,0 +1,19 @@
+language: node_js
+sudo: false
+node_js:
+- node
+install:
+- yarn install
+before_script:
+- yarn build
+script:
+- yarn test
+deploy:
+  skip_cleanup: true
+  provider: npm
+  email: adam@kreczko-lenner.com
+  api_key: $NPM_TOKEN
+  on:
+    tags: true
+    branch: master
+    repo: adamkl/cloud-foundry-config-client
