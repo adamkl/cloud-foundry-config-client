@@ -4,8 +4,8 @@ node_js:
 - node
 branches:
   only:
-  - master
-  - /v\d+\.\d+[a-z]/
+    - master
+    - /v\d+\.\d+[a-z]/
 before_install: 
 - yarn global add greenkeeper-lockfile@1
 install:
