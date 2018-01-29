@@ -1,4 +1,6 @@
 # cloud-foundry-config-client 
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/adamkl/cloud-foundry-config-client.svg)](https://greenkeeper.io/)
 [![npm version](https://badge.fury.io/js/cloud-foundry-config-client.svg)](https://badge.fury.io/js/cloud-foundry-config-client)
 [![Build Status](https://travis-ci.org/adamkl/cloud-foundry-config-client.svg?branch=master)](https://travis-ci.org/adamkl/cloud-foundry-config-client)
 
