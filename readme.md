@@ -7,9 +7,12 @@
 A simple client for pulling configuration from a PCF Spring Cloud Config Server
 
 ## Installation
-
 ```
-yarn cloud-foundry-config-client
+npm install cloud-foundry-config-client
+```
+or
+```
+yarn add cloud-foundry-config-client
 ```
 
 ## Usage
@@ -18,7 +21,7 @@ yarn cloud-foundry-config-client
 
 The first step is to `load` the configuration from a Cloud Foundry Config Server (or optionally from a local yaml file):
 
-```
+```javascript
 // index.js
 import * as express from 'express';
 import { Config } from 'cloud-foundry-config-client';
@@ -47,7 +50,7 @@ Config.load({
 
 Once the configuration has been loaded, it can be accessed in any other module buy referencing the `current` property on the `Config` object:
 
-```
+```javascript
 import * as jwt from 'express-jwt';
 import { Config } from 'cloud-foundry-config-client';
 
@@ -76,7 +79,7 @@ This is currently a very basic client and as such it enforces some limitations o
 
 If you haven't had a chance to configure a Cloud Foundry Cloud Config Server yet, you can fake it by loading configuration from a local yaml file:
 
-```
+```javascript
 Config.load({
   appName: "myExpressApp",  
   configLocation: "local", // gets configuration from local yaml file
@@ -88,14 +91,14 @@ Config.load({
 
 When loading from a local file, cloud-foundry-config-client expects the file to have a particular path and filename based on the `{ appName, profile, configServerName }` passed into the load function. These parameters are used to build the path and filename based on the following convention:
 
-```
+```bash
 // relative to the current working directory
 ./{configServerName}/{appName}-{profile}.yml
 ```
 
 Which, in our example above, translates to:
 
-```
+```bash
 ./myConfigServer/myExpressApp-dev.yml
 ```
 
@@ -105,7 +108,7 @@ It is also possible to load configuration from a Cloud Foundry Config Server whi
 
 If you want to load your configuration from a remote Config Server while running locally, copy the relevent VCAP_SERVICES to your local machine and either set a VCAP_SERVICES envronment variable before running your app, or, more easily, copy the JSON into a `vcap_services.json` file in the root of your application folder:
 
-```
+```json
 // vcap_services.js
 // cloud-foundry-config-client checks here if no
 // VCAP_SERVICES environment variable is found
@@ -127,7 +130,7 @@ If you want to load your configuration from a remote Config Server while running
 
 Then, just start your application locally, specifying `{ configLocation = "remote" }` in your `load` function:
 
-```
+```javascript
 Config.load({
   appName: "myExpressApp",  
   configLocation: "remote",
