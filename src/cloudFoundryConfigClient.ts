@@ -44,6 +44,7 @@ export function loadVcapServices(
  */
 export interface LocalLoaderConfig {
   path: string;
+  log_properties: boolean;
 }
 
 /**
@@ -58,7 +59,7 @@ export async function loadLocal(config: LocalLoaderConfig): Promise<any> {
     path.resolve(process.cwd(), config.path),
     "utf8"
   );
-  console.log(ymlString);
+  if(config.log_properties) console.debug(ymlString);
   const appConfig = yaml.safeLoad(ymlString, { schema: SchemaWithEnv });
   return appConfig;
 }
@@ -76,6 +77,7 @@ export interface RemoteLoaderConfig {
   uri: string;
   client_id: string;
   client_secret: string;
+  log_properties: boolean;
 }
 
 /**
@@ -96,7 +98,8 @@ export async function loadRemote(
     uri,
     access_token_uri,
     client_id,
-    client_secret
+    client_secret,
+    log_properties
   } = config;
   const response = await request.post(access_token_uri, {
     form: { grant_type: "client_credentials", client_id, client_secret }
@@ -108,7 +111,7 @@ export async function loadRemote(
       authorization: `bearer ${access_token}`
     }
   });
-  console.log(ymlString);
+  if (log_properties) console.debug(ymlString);
   return yaml.safeLoad(ymlString);
 }
 

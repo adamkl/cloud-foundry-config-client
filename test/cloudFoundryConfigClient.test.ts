@@ -3,6 +3,12 @@ import 'jest';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import * as console from "console";
+
+jest.mock("console", () => {
+      return { debug: jest.fn() };
+  });
+
 import {
   ConfigParams,
   getLoaderConfig,
@@ -14,6 +20,10 @@ import {
   LocalLoaderConfig,
   RemoteLoaderConfig,
 } from '../src/cloudFoundryConfigClient';
+
+beforeEach(() => {
+  console.debug.mockClear();
+});
 
 describe("loadVcapServices", () => {
   test("loads local file if vcap_services is undefined", () => {
@@ -139,6 +149,18 @@ describe("loadLocal", () => {
       loadLocal({ path: "./missing/testApp-test.yml" })
     ).rejects.toBeDefined();
   });
+  describe('with logging off', () => {
+    test("loads local file if present and does not log to the console", async () => {
+      const config = await loadLocal({ path: getTestYmlPath() });
+      expect(console.debug).not.toBeCalled();
+    });
+  });
+  describe('with logging on', () => {
+    test("loads local file if present and does log to the console", async () => {
+      const config = await loadLocal({ path: getTestYmlPath(), log_properties: true });
+      expect(console.debug).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe("loadRemote", () => {
@@ -187,6 +209,28 @@ describe("loadRemote", () => {
         port: "443",
         ssl: "true"
       }
+    });
+  });
+  describe('with logging off', () => {
+    test("posts oauth request and does not log to the console", async () => {
+      const config = await loadRemote(loaderConfig, request);
+      expect(console.debug).not.toBeCalled();
+    });
+  });
+  describe('with logging on', () => {
+    const loaderConfig: RemoteLoaderConfig = {
+      appName: "testApp",
+      profile: "test",
+      uri: "http://test.config",
+      access_token_uri: "http://test.token",
+      client_id: "id",
+      client_secret: "secret",
+      log_properties: true
+    };
+
+    test("posts oauth request and does log to the console", async () => {
+      const config = await loadRemote(loaderConfig, request);
+      expect(console.debug).toHaveBeenCalledTimes(1);
     });
   });
 });
