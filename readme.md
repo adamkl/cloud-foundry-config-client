@@ -1,4 +1,4 @@
-# cloud-foundry-config-client 
+# cloud-foundry-config-client
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/adamkl/cloud-foundry-config-client.svg)](https://greenkeeper.io/)
 [![npm version](https://badge.fury.io/js/cloud-foundry-config-client.svg)](https://badge.fury.io/js/cloud-foundry-config-client)
@@ -7,10 +7,13 @@
 A simple client for pulling configuration from a PCF Spring Cloud Config Server
 
 ## Installation
+
 ```
 npm install cloud-foundry-config-client
 ```
+
 or
+
 ```
 yarn add cloud-foundry-config-client
 ```
@@ -28,13 +31,15 @@ import { Config } from 'cloud-foundry-config-client';
 ...
 Config.load({
   // defines the application name to used when querying the config server
-  appName: "myExpressApp",  
+  appName: "myExpressApp",
   // "remote" will query the config server, "local" will read from a local yaml file
-  configLocation: "remote",  
+  configLocation: "remote",
   // profile to use when querying the config server, e.g "dev", "uat", "prod"
   profile: "dev",
   // the name of the config server in PCF
-  configServerName: "myConfigServer"
+  configServerName: "myConfigServer",
+  // optional property to control logging of loaded config to console
+  logProperties: true | false | undefined
 })
 .then(() => { // on successful load, start your application
   const app = express()
@@ -72,8 +77,8 @@ app.use((err, req, res, next) => {
 
 This is currently a very basic client and as such it enforces some limitations on the usage of the Spring Cloud Config Server.
 
-* This client has only been tested with a git repo backing the config server
-* The client expects configuration yaml files to be stored in the root of the git backing repo with the following file name convention: `{appName}-{profile}.yml //(e.g. myExpressApp-dev.yml)`
+- This client has only been tested with a git repo backing the config server
+- The client expects configuration yaml files to be stored in the root of the git backing repo with the following file name convention: `{appName}-{profile}.yml //(e.g. myExpressApp-dev.yml)`
 
 ## Loading from a local file
 
@@ -81,7 +86,7 @@ If you haven't had a chance to configure a Cloud Foundry Cloud Config Server yet
 
 ```javascript
 Config.load({
-  appName: "myExpressApp",  
+  appName: "myExpressApp",
   configLocation: "local", // gets configuration from local yaml file
   profile: "dev",
   configServerName: "myConfigServer"
@@ -132,7 +137,7 @@ Then, just start your application locally, specifying `{ configLocation = "remot
 
 ```javascript
 Config.load({
-  appName: "myExpressApp",  
+  appName: "myExpressApp",
   configLocation: "remote",
   profile: "dev",
   configServerName: "myConfigServer"

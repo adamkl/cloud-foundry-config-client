@@ -1,1 +1,6 @@
 coverage/
+node_modules/
+src/
+.npmrc
+.travis.yml
+.vscode
