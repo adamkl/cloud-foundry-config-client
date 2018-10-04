@@ -145,13 +145,19 @@ export async function load(
   } else {
     appConfig = await loadRemoteFunc(config);
   }
-  if (params.logProperties) {
-    const { appName, configServerName, configLocation, profile } = params;
-    console.debug(
-      `Settings loaded from ${configLocation} ${configServerName} for ${appName}-${profile}: ${JSON.stringify(
-        appConfig
-      )}`
-    );
+  const {
+    appName,
+    configServerName,
+    configLocation,
+    profile,
+    logProperties
+  } = params;
+  console.debug(
+    `Settings loaded from ${configLocation} ${configServerName} for ${appName}-${profile}`
+  );
+  if (logProperties) {
+    console.debug("--------------------------------");
+    console.debug(JSON.stringify(appConfig, null, 2));
   }
   return appConfig;
 }

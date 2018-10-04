@@ -234,7 +234,7 @@ describe("load", () => {
         { logProperties: false } as any,
         loadLocalFunc
       );
-      expect(console.debug).toHaveBeenCalledTimes(0);
+      expect(console.debug).toHaveBeenCalledTimes(1);
     });
   });
   describe("with logging on", () => {
@@ -246,7 +246,7 @@ describe("load", () => {
         { logProperties: true } as any,
         loadLocalFunc
       );
-      expect(console.debug).toHaveBeenCalledTimes(1);
+      expect(console.debug).toHaveBeenCalledTimes(3);
     });
   });
 });
