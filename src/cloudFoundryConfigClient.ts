@@ -44,7 +44,6 @@ export function loadVcapServices(
  */
 export interface LocalLoaderConfig {
   path: string;
-  log_properties: boolean;
 }
 
 /**
@@ -59,7 +58,6 @@ export async function loadLocal(config: LocalLoaderConfig): Promise<any> {
     path.resolve(process.cwd(), config.path),
     "utf8"
   );
-  if(config.log_properties) console.debug(ymlString);
   const appConfig = yaml.safeLoad(ymlString, { schema: SchemaWithEnv });
   return appConfig;
 }
@@ -77,7 +75,6 @@ export interface RemoteLoaderConfig {
   uri: string;
   client_id: string;
   client_secret: string;
-  log_properties: boolean;
 }
 
 /**
@@ -98,8 +95,7 @@ export async function loadRemote(
     uri,
     access_token_uri,
     client_id,
-    client_secret,
-    log_properties
+    client_secret
   } = config;
   const response = await request.post(access_token_uri, {
     form: { grant_type: "client_credentials", client_id, client_secret }
@@ -111,7 +107,6 @@ export async function loadRemote(
       authorization: `bearer ${access_token}`
     }
   });
-  if (log_properties) console.debug(ymlString);
   return yaml.safeLoad(ymlString);
 }
 
@@ -140,14 +135,31 @@ export function isLocalConfig(
  */
 export async function load(
   config: LoaderConfig,
+  params: ConfigParams,
   loadLocalFunc = loadLocal,
   loadRemoteFunc = loadRemote
 ): Promise<any> {
+  let appConfig;
   if (isLocalConfig(config)) {
-    return await loadLocalFunc(config);
+    appConfig = await loadLocalFunc(config);
   } else {
-    return await loadRemoteFunc(config);
+    appConfig = await loadRemoteFunc(config);
   }
+  const {
+    appName,
+    configServerName,
+    configLocation,
+    profile,
+    logProperties
+  } = params;
+  console.debug(
+    `Settings loaded from ${configLocation} ${configServerName} for ${appName}-${profile}`
+  );
+  if (logProperties) {
+    console.debug("--------------------------------");
+    console.debug(JSON.stringify(appConfig, null, 2));
+  }
+  return appConfig;
 }
 
 export type ConfigLocation = "local" | "remote";
@@ -174,11 +186,11 @@ export function getLoaderConfig(
       appName,
       profile,
       ...credentials
-    };
+    } as RemoteLoaderConfig;
   } else {
     loaderConfig = {
       path: `./${configServerName}/${appName}-${profile}.yml`
-    };
+    } as LocalLoaderConfig;
   }
   return loaderConfig;
 }
@@ -194,6 +206,7 @@ export interface ConfigParams {
   profile: string;
   configServerName: string;
   configLocation: ConfigLocation;
+  logProperties?: boolean;
 }
 
 /**
@@ -221,6 +234,6 @@ export class Config {
    */
   public static async load(params: ConfigParams): Promise<void> {
     const config = getLoaderConfig(params);
-    this.current = await load(config);
+    this.current = await load(config, params);
   }
 }

@@ -1,15 +1,16 @@
-import 'jest';
+import "jest";
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 import * as console from "console";
 
 jest.mock("console", () => {
-      return { debug: jest.fn() };
-  });
+  return { debug: jest.fn() };
+});
 
 import {
+  Config,
   ConfigParams,
   getLoaderConfig,
   isLocalConfig,
@@ -18,11 +19,11 @@ import {
   loadRemote,
   loadVcapServices,
   LocalLoaderConfig,
-  RemoteLoaderConfig,
-} from '../src/cloudFoundryConfigClient';
+  RemoteLoaderConfig
+} from "../src/cloudFoundryConfigClient";
 
 beforeEach(() => {
-  console.debug.mockClear();
+  (console as any).debug.mockClear();
 });
 
 describe("loadVcapServices", () => {
@@ -149,18 +150,6 @@ describe("loadLocal", () => {
       loadLocal({ path: "./missing/testApp-test.yml" })
     ).rejects.toBeDefined();
   });
-  describe('with logging off', () => {
-    test("loads local file if present and does not log to the console", async () => {
-      const config = await loadLocal({ path: getTestYmlPath() });
-      expect(console.debug).not.toBeCalled();
-    });
-  });
-  describe('with logging on', () => {
-    test("loads local file if present and does log to the console", async () => {
-      const config = await loadLocal({ path: getTestYmlPath(), log_properties: true });
-      expect(console.debug).toHaveBeenCalledTimes(1);
-    });
-  });
 });
 
 describe("loadRemote", () => {
@@ -184,7 +173,10 @@ describe("loadRemote", () => {
     });
   });
   const get = jest.fn(async options => {
-    const { uri, headers: { authorization } } = options;
+    const {
+      uri,
+      headers: { authorization }
+    } = options;
     expect(uri).toEqual(
       `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
     );
@@ -211,35 +203,13 @@ describe("loadRemote", () => {
       }
     });
   });
-  describe('with logging off', () => {
-    test("posts oauth request and does not log to the console", async () => {
-      const config = await loadRemote(loaderConfig, request);
-      expect(console.debug).not.toBeCalled();
-    });
-  });
-  describe('with logging on', () => {
-    const loaderConfig: RemoteLoaderConfig = {
-      appName: "testApp",
-      profile: "test",
-      uri: "http://test.config",
-      access_token_uri: "http://test.token",
-      client_id: "id",
-      client_secret: "secret",
-      log_properties: true
-    };
-
-    test("posts oauth request and does log to the console", async () => {
-      const config = await loadRemote(loaderConfig, request);
-      expect(console.debug).toHaveBeenCalledTimes(1);
-    });
-  });
 });
 
 describe("load", () => {
   test("calls loadLocal", async () => {
     const loadLocalFunc = jest.fn(config => {});
     const loaderConfig = { path: getTestYmlPath() };
-    const config = await load(loaderConfig, loadLocalFunc);
+    const config = await load(loaderConfig, {} as any, loadLocalFunc);
     expect(loadLocalFunc).toBeCalledWith(loaderConfig);
   });
   test("calls loadRemote", async () => {
@@ -252,8 +222,32 @@ describe("load", () => {
       client_id: "id",
       client_secret: "secret"
     };
-    const config = await load(loaderConfig, null, loadRemoteFunc);
+    const config = await load(loaderConfig, {} as any, null, loadRemoteFunc);
     expect(loadRemoteFunc).toBeCalledWith(loaderConfig);
+  });
+  describe("with logging off", () => {
+    test("does not log to console", async () => {
+      const loadLocalFunc = jest.fn(config => {});
+      const loaderConfig = { path: getTestYmlPath() };
+      const config = await load(
+        loaderConfig,
+        { logProperties: false } as any,
+        loadLocalFunc
+      );
+      expect(console.debug).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe("with logging on", () => {
+    test("does log to console", async () => {
+      const loadLocalFunc = jest.fn(config => {});
+      const loaderConfig = { path: getTestYmlPath() };
+      const config = await load(
+        loaderConfig,
+        { logProperties: true } as any,
+        loadLocalFunc
+      );
+      expect(console.debug).toHaveBeenCalledTimes(3);
+    });
   });
 });
 
@@ -274,7 +268,9 @@ describe("getLoaderConfig", () => {
     );
     const { path } = <LocalLoaderConfig>loaderConfig;
     expect(path).toEqual(
-      `./${configParams.configServerName}/${configParams.appName}-${configParams.profile}.yml`
+      `./${configParams.configServerName}/${configParams.appName}-${
+        configParams.profile
+      }.yml`
     );
   });
   test("returns RemoteLoaderConfig", async () => {
