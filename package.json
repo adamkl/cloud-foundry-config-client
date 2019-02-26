@@ -36,7 +36,7 @@
     "request-promise-native": "^1.0.4"
   },
   "devDependencies": {
-    "@types/jest": "^22.1.0",
+    "@types/jest": "^24.0.8",
     "@types/node": "^8",
     "del": "^3.0.0",
     "gulp": "^3.9.1",
