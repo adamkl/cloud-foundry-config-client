@@ -168,7 +168,7 @@ export type ConfigLocation = "local" | "remote";
  * Generated appropriate loader config file based on whether configuration is to be loaded locally or remotely
  *
  * @export
- * @param {ConfigParams} params contains paramters used to load correct configuration
+ * @param {ConfigParams} params contains parameters used to load correct configuration
  * @returns {LoaderConfig} either a LocalLoaderConfig or a RemoteLoaderConfig
  */
 export function getLoaderConfig(
@@ -196,7 +196,44 @@ export function getLoaderConfig(
 }
 
 /**
- * contains required paramters for loading application configuration
+ * Wraps config load call inside optional setInterval for auto-updating
+ * @param config
+ * @param params
+ * @param updateFunc
+ * @param loadLocalFunc
+ * @param loadRemoteFunc
+ */
+export async function loadAndRepeat(
+  config,
+  params,
+  updateFunc,
+  loadLocalFunc = loadLocal,
+  loadRemoteFunc = loadRemote
+) {
+  updateFunc(await load(config, params, loadLocalFunc, loadRemoteFunc));
+
+  const { interval } = params;
+  if (interval) {
+    console.debug(
+      `set to auto-refresh config with interval of ${interval} seconds`
+    );
+    setInterval(async () => {
+      try {
+        console.debug(
+          `auto-refreshing config after waiting ${interval} seconds`
+        );
+        updateFunc(await load(config, params, loadLocalFunc, loadRemoteFunc));
+      } catch (err) {
+        console.debug(
+          `Problem encountered while refreshing config; using previous config: ${err}`
+        );
+      }
+    }, interval * 1000);
+  }
+}
+
+/**
+ * contains required parameters for loading application configuration
  *
  * @export
  * @interface ConfigParams
@@ -207,6 +244,7 @@ export interface ConfigParams {
   configServerName: string;
   configLocation: ConfigLocation;
   logProperties?: boolean;
+  interval?: number;
 }
 
 /**
@@ -234,6 +272,8 @@ export class Config {
    */
   public static async load(params: ConfigParams): Promise<void> {
     const config = getLoaderConfig(params);
-    this.current = await load(config, params);
+    await loadAndRepeat(config, params, loadedConfig => {
+      this.current = loadedConfig;
+    });
   }
 }
