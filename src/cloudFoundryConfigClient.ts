@@ -168,7 +168,7 @@ export type ConfigLocation = "local" | "remote";
  * Generated appropriate loader config file based on whether configuration is to be loaded locally or remotely
  *
  * @export
- * @param {ConfigParams} params contains paramters used to load correct configuration
+ * @param {ConfigParams} params contains parameters used to load correct configuration
  * @returns {LoaderConfig} either a LocalLoaderConfig or a RemoteLoaderConfig
  */
 export function getLoaderConfig(

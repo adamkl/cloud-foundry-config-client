@@ -3,7 +3,7 @@
     "allowSyntheticDefaultImports": true,
     "lib": ["esnext"],
     "module": "commonjs",
-    "outDir": "dist",
+    "outDir": "lib",
     "strictNullChecks": true,
     "target": "es5",
     "forceConsistentCasingInFileNames": true,
