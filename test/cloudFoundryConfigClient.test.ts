@@ -5,6 +5,7 @@ import * as path from "path";
 
 import * as console from "console";
 
+jest.useFakeTimers();
 jest.mock("console", () => {
   return { debug: jest.fn() };
 });
@@ -14,6 +15,7 @@ import {
   ConfigParams,
   getLoaderConfig,
   isLocalConfig,
+  loadAndRepeat,
   load,
   loadLocal,
   loadRemote,
@@ -205,6 +207,103 @@ describe("loadRemote", () => {
   });
 });
 
+describe("loadAndRepeat", () => {
+  test("calls updateFunc once", async () => {
+    const updateFunc = jest.fn();
+    const loadLocalFunc = jest.fn();
+    const loaderConfig = { path: getTestYmlPath() };
+    const params = {} as any;
+    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    expect(updateFunc).toBeCalled();
+    expect(updateFunc).toHaveBeenCalledTimes(1);
+  });
+  test("calls updateFunc 5 times", async () => {
+    const updateFunc = jest.fn();
+    const loadLocalFunc = jest.fn();
+    const loaderConfig = { path: getTestYmlPath() };
+    const params = { interval: 1 } as any;
+    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    for (let i = 0; i < 4; i++) {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    }
+    expect(console.debug).toHaveBeenCalledWith(
+      `set to auto-refresh config with interval of ${params.interval} seconds`
+    );
+    expect(console.debug).toHaveBeenCalledWith(
+      `auto-refreshing config after waiting ${params.interval} seconds`
+    );
+    expect(updateFunc).toHaveBeenCalledTimes(5);
+  });
+
+  test("updates config on interval", async () => {
+    let current = undefined;
+    const updateFunc = jest.fn(newConfig => {
+      current = newConfig;
+    });
+    const loadedConfig1 = {
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true"
+      }
+    };
+    const loadedConfig2 = {
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true",
+        newFeature1: true
+      }
+    };
+
+    const loadLocalFunc = jest.fn();
+    loadLocalFunc
+      .mockReturnValueOnce(loadedConfig1)
+      .mockReturnValue(loadedConfig2);
+
+    const loaderConfig = { path: getTestYmlPath() };
+    const params = { interval: 1 } as any;
+    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+
+    expect(current).toEqual(loadedConfig1);
+
+    jest.advanceTimersByTime(1000);
+    await Promise.resolve();
+
+    expect(current).toEqual(loadedConfig2);
+  });
+
+  test("logs error on refresh; uses previous config", async () => {
+    let current = undefined;
+    const updateFunc = jest.fn(newConfig => {
+      current = newConfig;
+    });
+    const loadedConfig = {
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true"
+      }
+    };
+    const error = new Error("error loading local config");
+    const loadLocalFunc = jest.fn();
+    loadLocalFunc.mockReturnValueOnce(loadedConfig).mockRejectedValue(error);
+
+    const loaderConfig = { path: getTestYmlPath() };
+    const params = { interval: 1 } as any;
+    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    for (let i = 0; i < 4; i++) {
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+    }
+    expect(console.debug).toHaveBeenCalledWith(
+      `Problem encountered while refreshing config; using previous config: ${error}`
+    );
+    expect(current).toEqual(loadedConfig);
+  });
+});
+
 describe("load", () => {
   test("calls loadLocal", async () => {
     const loadLocalFunc = jest.fn(config => {});
@@ -301,10 +400,31 @@ describe("getLoaderConfig", () => {
   });
 });
 
+describe("Config.load", () => {
+  test("local e2e", async () => {
+    const configParams: ConfigParams = {
+      appName: "testApp",
+      profile: "test",
+      configServerName: "test-config",
+      configLocation: "local"
+    };
+
+    await Config.load(configParams);
+
+    expect(Config.current).toEqual({
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true"
+      }
+    });
+  });
+});
+
 function getVcapPath(): string {
   return "./test/vcap_services.json";
 }
 
 function getTestYmlPath(): string {
-  return "./test/testApp-test.yml";
+  return "./test-config/testApp-test.yml";
 }

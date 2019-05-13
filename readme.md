@@ -39,7 +39,9 @@ Config.load({
   // the name of the config server in PCF
   configServerName: "myConfigServer",
   // optional property to control logging of loaded config to console
-  logProperties: true | false | undefined
+  logProperties: true | false | undefined,
+  // optional property to control auto-refresh of config based on given interval (seconds)
+  interval: number | undefined
 })
 .then(() => { // on successful load, start your application
   const app = express()
