@@ -15,13 +15,16 @@ import {
   ConfigParams,
   getLoaderConfig,
   isLocalConfig,
+  isRemoteConfig,
   loadAndRepeat,
   load,
   loadLocal,
   loadRemote,
+  loadRemoteSkipAuth,
   loadVcapServices,
   LocalLoaderConfig,
-  RemoteLoaderConfig
+  RemoteLoaderConfig,
+  RemoteSkipAuthLoaderConfig,
 } from "../src/cloudFoundryConfigClient";
 
 beforeEach(() => {
@@ -122,7 +125,7 @@ describe("isLocalConfig", () => {
     const output = isLocalConfig(loaderConfig);
     expect(output).toBe(true);
   });
-  test("returns false if LoaderConfig is LocalLoaderConfig", () => {
+  test("returns false if LoaderConfig is not LocalLoaderConfig", () => {
     const loaderConfig: RemoteLoaderConfig = {
       appName: "testApp",
       profile: "test",
@@ -132,6 +135,28 @@ describe("isLocalConfig", () => {
       client_secret: "secret"
     };
     const output = isLocalConfig(loaderConfig);
+    expect(output).toBe(false);
+  });
+});
+
+describe("isRemoteConfig", () => {
+  test("returns true if LoaderConfig is RemoteLoaderConfig", () => {
+    const loaderConfig: RemoteLoaderConfig = {
+      appName: "testApp",
+      profile: "test",
+      uri: "http://test.config",
+      access_token_uri: "http://test.token",
+      client_id: "id",
+      client_secret: "secret"
+    };
+    const output = isRemoteConfig(loaderConfig);
+    expect(output).toBe(true);
+  });
+  test("returns false if LoaderConfig is not RemoteLoaderConfig", () => {
+    const loaderConfig: LocalLoaderConfig = {
+      path: "./testApp-test.yml"
+    };
+    const output = isRemoteConfig(loaderConfig);
     expect(output).toBe(false);
   });
 });
@@ -197,6 +222,42 @@ describe("loadRemote", () => {
   };
   test("posts oauth request and returns config from remote source", async () => {
     const config = await loadRemote(loaderConfig, request);
+    expect(config).toEqual({
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true"
+      }
+    });
+  });
+});
+
+describe("loadRemoteSkipAuth", () => {
+  const loaderConfig: RemoteSkipAuthLoaderConfig = {
+    appName: "testApp",
+    profile: "test",
+    uri: "http://test.config"
+  };
+  const get = jest.fn(async options => {
+    const {
+      uri
+    } = options;
+    expect(uri).toEqual(
+        `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
+    );
+    const ymlString = fs.readFileSync(
+        path.resolve(process.cwd(), getTestYmlPath()),
+        "utf8"
+    );
+    return new Promise(resolve => {
+      resolve(ymlString);
+    });
+  });
+  const request = {
+    get
+  };
+  test("returns config from remote source skipping the authentication step", async () => {
+    const config = await loadRemoteSkipAuth(loaderConfig, request);
     expect(config).toEqual({
       "test-app": {
         host: "www.test.com",
@@ -324,6 +385,16 @@ describe("load", () => {
     const config = await load(loaderConfig, {} as any, null, loadRemoteFunc);
     expect(loadRemoteFunc).toBeCalledWith(loaderConfig);
   });
+  test("calls loadRemoteSkipAuth", async () => {
+    const loadRemoteSkipAuthFunc = jest.fn(config => {});
+    const loaderConfig: RemoteSkipAuthLoaderConfig = {
+      appName: "testApp",
+      profile: "test",
+      uri: "http://test.config"
+    };
+    const config = await load(loaderConfig, {} as any, null, null, loadRemoteSkipAuthFunc);
+    expect(loadRemoteSkipAuthFunc).toBeCalledWith(loaderConfig);
+  });
   describe("with logging off", () => {
     test("does not log to console", async () => {
       const loadLocalFunc = jest.fn(config => {});
@@ -397,6 +468,27 @@ describe("getLoaderConfig", () => {
     expect(access_token_uri).toEqual("local.token");
     expect(client_id).toEqual("id");
     expect(client_secret).toEqual("secret");
+  });
+  test("returns RemoteSkipAuthLoaderConfig", async () => {
+    process.env['CONFIG_SERVER_URI_WHEN_SKIP_AUTH'] = 'http://localhost:8888';
+    const configParams: ConfigParams = {
+      appName: "testApp",
+      profile: "test",
+      configServerName: "test-config",
+      configLocation: "remoteSkipAuth"
+    };
+    const loaderConfig = await getLoaderConfig(
+        configParams,
+        loadVcapServicesFunc
+    );
+    const {
+      appName,
+      profile,
+      uri
+    } = <RemoteSkipAuthLoaderConfig>loaderConfig;
+    expect(appName).toEqual(configParams.appName);
+    expect(profile).toEqual(configParams.profile);
+    expect(uri).toEqual("http://localhost:8888");
   });
 });
 

@@ -102,7 +102,7 @@ export async function loadRemote(
   });
   const { access_token } = JSON.parse(response);
   const ymlString = await request.get({
-    uri: `${uri}/${appName}-${profile}.yml`,
+    uri: getYmlUri(uri, appName, profile),
     headers: {
       authorization: `bearer ${access_token}`
     }
@@ -110,7 +110,48 @@ export async function loadRemote(
   return yaml.safeLoad(ymlString);
 }
 
-export type LoaderConfig = LocalLoaderConfig | RemoteLoaderConfig;
+/**
+ * object specifying connection details of a Spring Cloud Config Server
+ * but skipping the authorization step
+ *
+ * @export
+ * @interface RemoteSkipAuthLoaderConfig
+ */
+export interface RemoteSkipAuthLoaderConfig {
+  appName: string;
+  profile: string;
+  uri: string;
+}
+
+/**
+ * Pulls configuration from bound Spring Cloud Config Server based on app name and profile
+ * This method skips the authentication step
+ *
+ * @export
+ * @param {RemoteSkipAuthLoaderConfig} config object specifying connection details of a Spring Cloud Config Server
+ * @param {any} [request=rp] optional request object to use for making calls to config server (defaults to request-promise-native)
+ * @returns {Promise<any>} returns config object parsed from remote yml file
+ */
+export async function loadRemoteSkipAuth(
+  config: RemoteSkipAuthLoaderConfig,
+  request = rp
+): Promise<any> {
+  const {
+    appName,
+    profile,
+    uri
+  } = config;
+  const ymlString = await request.get({
+    uri: getYmlUri(uri, appName, profile)
+  });
+  return yaml.safeLoad(ymlString);
+}
+
+function getYmlUri(uri: string, appName: string, profile: string) {
+  return `${uri}/${appName}-${profile}.yml`;
+}
+
+export type LoaderConfig = LocalLoaderConfig | RemoteLoaderConfig | RemoteSkipAuthLoaderConfig;
 /**
  * Tests to see if provided LoaderConfig is a LocalLoaderConfig
  *
@@ -125,25 +166,45 @@ export function isLocalConfig(
 }
 
 /**
+ * Tests to see if provided LoaderConfig is a RemoteLoaderConfig
+ *
+ * @export
+ * @param {LoaderConfig} config
+ * @returns {config is RemoteLoaderConfig}
+ */
+export function isRemoteConfig(
+  config: LoaderConfig
+): config is RemoteLoaderConfig {
+  return (<RemoteLoaderConfig>config).access_token_uri !== undefined
+      && (<RemoteLoaderConfig>config).client_id !== undefined
+      && (<RemoteLoaderConfig>config).client_secret !== undefined;
+}
+
+/**
  * Loads configuration from either remote or local location based on provided configuration object
  *
  * @export
  * @param {LoaderConfig} config Object containing parameters to use for loading configuration
  * @param {any} [loadLocalFunc=loadLocal] function responsible for loading local yml file
  * @param {any} [loadRemoteFunc=loadRemote] function responsible for loading config from Spring Cloud Config Server
+ * @param {any} [loadRemoteSkipAuthFunc=loadRemoteSkipAuth] function responsible for loading config from
+ * Spring Cloud Config Server skipping the authorization step
  * @returns {Promise<any>} returns loaded configuration object
  */
 export async function load(
   config: LoaderConfig,
   params: ConfigParams,
   loadLocalFunc = loadLocal,
-  loadRemoteFunc = loadRemote
+  loadRemoteFunc = loadRemote,
+  loadRemoteSkipAuthFunc = loadRemoteSkipAuth
 ): Promise<any> {
   let appConfig;
   if (isLocalConfig(config)) {
     appConfig = await loadLocalFunc(config);
-  } else {
+  } else if (isRemoteConfig(config)) {
     appConfig = await loadRemoteFunc(config);
+  } else {
+    appConfig = await loadRemoteSkipAuthFunc(config)
   }
   const {
     appName,
@@ -162,7 +223,7 @@ export async function load(
   return appConfig;
 }
 
-export type ConfigLocation = "local" | "remote";
+export type ConfigLocation = "local" | "remote" | "remoteSkipAuth";
 
 /**
  * Generated appropriate loader config file based on whether configuration is to be loaded locally or remotely
@@ -176,9 +237,9 @@ export function getLoaderConfig(
   loadVcapServicesFunc = loadVcapServices
 ): LoaderConfig {
   const { appName, profile, configServerName, configLocation } = params;
-  const vcap_services = loadVcapServicesFunc(process.env.VCAP_SERVICES);
   let loaderConfig: LoaderConfig;
   if (configLocation === "remote") {
+    const vcap_services = loadVcapServicesFunc(process.env.VCAP_SERVICES);
     const { credentials } = vcap_services["p-config-server"].find(
       cfg => cfg.name === configServerName
     );
@@ -187,6 +248,13 @@ export function getLoaderConfig(
       profile,
       ...credentials
     } as RemoteLoaderConfig;
+  } else if (configLocation == "remoteSkipAuth") {
+    const uri = process.env.CONFIG_SERVER_URI_WHEN_SKIP_AUTH;
+    loaderConfig = {
+      appName,
+      profile,
+      uri
+    } as RemoteSkipAuthLoaderConfig;
   } else {
     loaderConfig = {
       path: `./${configServerName}/${appName}-${profile}.yml`
