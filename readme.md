@@ -32,7 +32,7 @@ import { Config } from 'cloud-foundry-config-client';
 Config.load({
   // defines the application name to used when querying the config server
   appName: "myExpressApp",
-  // "remote" will query the config server, "local" will read from a local yaml file
+  // "remote" will query the config server, "remoteSkipAuth" will query the config server skipping authorization step and "local" will read from a local yaml file
   configLocation: "remote",
   // profile to use when querying the config server, e.g "dev", "uat", "prod"
   profile: "dev",
@@ -113,7 +113,7 @@ Which, in our example above, translates to:
 
 It is also possible to load configuration from a Cloud Foundry Config Server while running your application locally. `cloud-foundry-config-client` looks in the VCAP_SERVICES environment variable to find the client credentials needed to connect to a Config Server (based on `{ configServerName }` passed into the `load` function).
 
-If you want to load your configuration from a remote Config Server while running locally, copy the relevent VCAP_SERVICES to your local machine and either set a VCAP_SERVICES envronment variable before running your app, or, more easily, copy the JSON into a `vcap_services.json` file in the root of your application folder:
+If you want to load your configuration from a remote Config Server while running locally, copy the relevant VCAP_SERVICES to your local machine and either set a VCAP_SERVICES environment variable before running your app, or, more easily, copy the JSON into a `vcap_services.json` file in the root of your application folder:
 
 ```json
 // vcap_services.js
@@ -146,3 +146,11 @@ Config.load({
 })
 ...
 ```
+
+## Loading from a remote config server while running application locally skipping the authorization step
+
+If you are using a local Config Server for testing purposes and you don't want to manage with any kind of authorization, 
+you can skip the authorization step following the next steps:
+
+* Set the `configLocation` to `remoteSkipAuth`. 
+* Set an environment variable with the Config Server URL: `CONFIG_SERVER_URI_WHEN_SKIP_AUTH="http://localhost:8888"`.
