@@ -225,6 +225,8 @@ export async function load(
 
 export type ConfigLocation = "local" | "remote" | "remoteSkipAuth";
 
+const configServerServiceNameValues = ["p-config-server", "p.config-server"];
+
 /**
  * Generated appropriate loader config file based on whether configuration is to be loaded locally or remotely
  *
@@ -240,8 +242,13 @@ export function getLoaderConfig(
   let loaderConfig: LoaderConfig;
   if (configLocation === "remote") {
     const vcap_services = loadVcapServicesFunc(process.env.VCAP_SERVICES);
-    const { credentials } = vcap_services["p-config-server"].find(
-      cfg => cfg.name === configServerName
+    const configServerServiceName =
+        configServerServiceNameValues.find(configServerServiceName => vcap_services.hasOwnProperty(configServerServiceName));
+    if (!configServerServiceName) {
+      throw new Error(`Either ${configServerServiceNameValues.join(" or ")} must be defined on VCAP_SERVICES`);
+    }
+    const { credentials } = vcap_services[`${configServerServiceName}`].find(
+        cfg => cfg.name === configServerName
     );
     loaderConfig = {
       appName,

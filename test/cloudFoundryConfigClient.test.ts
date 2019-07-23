@@ -27,6 +27,10 @@ import {
   RemoteSkipAuthLoaderConfig,
 } from "../src/cloudFoundryConfigClient";
 
+const P_CONFIG_SERVER_SERVICE_NAME_HYPHEN = "p-config-server";
+const P_CONFIG_SERVER_SERVICE_NAME_DOT = "p.config-server";
+const P_CONFIG_SERVER_SERVICE_NAME_INVALID = "invalid";
+
 beforeEach(() => {
   (console as any).debug.mockClear();
 });
@@ -34,7 +38,7 @@ beforeEach(() => {
 describe("loadVcapServices", () => {
   test("loads local file if vcap_services is undefined", () => {
     const vcap_services: string = undefined;
-    const output = loadVcapServices(vcap_services, getVcapPath());
+    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -52,7 +56,7 @@ describe("loadVcapServices", () => {
 
   test("loads local file if vcap_services is null", () => {
     const vcap_services: string = null;
-    const output = loadVcapServices(vcap_services, getVcapPath());
+    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -70,7 +74,7 @@ describe("loadVcapServices", () => {
 
   test("loads local file if vcap_services is empty", () => {
     const vcap_services: string = "";
-    const output = loadVcapServices(vcap_services, getVcapPath());
+    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -423,7 +427,7 @@ describe("load", () => {
 
 describe("getLoaderConfig", () => {
   const loadVcapServicesFunc = vcap_services => {
-    return loadVcapServices(vcap_services, "./test/vcap_services.json");
+    return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
   };
   test("returns LocalLoaderConfig", async () => {
     const configParams: ConfigParams = {
@@ -443,7 +447,7 @@ describe("getLoaderConfig", () => {
       }.yml`
     );
   });
-  test("returns RemoteLoaderConfig", async () => {
+  test(`returns RemoteLoaderConfig with vcap_services_${P_CONFIG_SERVER_SERVICE_NAME_HYPHEN}.json`, async () => {
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
@@ -490,6 +494,57 @@ describe("getLoaderConfig", () => {
     expect(profile).toEqual(configParams.profile);
     expect(uri).toEqual("http://localhost:8888");
   });
+  test(`returns RemoteLoaderConfig with vcap_services_${P_CONFIG_SERVER_SERVICE_NAME_DOT}.json`, async () => {
+    const loadVcapServicesFuncWithDot = vcap_services => {
+      return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_DOT));
+    };
+    const configParams: ConfigParams = {
+      appName: "testApp",
+      profile: "test",
+      configServerName: "test-config",
+      configLocation: "remote"
+    };
+    const loaderConfig = await getLoaderConfig(
+      configParams,
+      loadVcapServicesFuncWithDot
+    );
+    const {
+      appName,
+      profile,
+      uri,
+      access_token_uri,
+      client_id,
+      client_secret
+    } = <RemoteLoaderConfig>loaderConfig;
+    expect(appName).toEqual(configParams.appName);
+    expect(profile).toEqual(configParams.profile);
+    expect(uri).toEqual("local.config");
+    expect(access_token_uri).toEqual("local.token");
+    expect(client_id).toEqual("id");
+    expect(client_secret).toEqual("secret");
+  });
+  test("throws an exception instead of a RemoteLoaderConfig with an invalid vcap_services", async () => {
+    const loadVcapServicesFuncInvalid = vcap_services => {
+      return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_INVALID));
+    };
+    const configParams: ConfigParams = {
+      appName: "testApp",
+      profile: "test",
+      configServerName: "test-config",
+      configLocation: "remote"
+    };
+    let error;
+    try {
+      await getLoaderConfig(
+        configParams,
+        loadVcapServicesFuncInvalid
+      );
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toEqual(
+        new Error(`Either ${P_CONFIG_SERVER_SERVICE_NAME_HYPHEN} or ${P_CONFIG_SERVER_SERVICE_NAME_DOT} must be defined on VCAP_SERVICES`));
+  });
 });
 
 describe("Config.load", () => {
@@ -513,8 +568,8 @@ describe("Config.load", () => {
   });
 });
 
-function getVcapPath(): string {
-  return "./test/vcap_services.json";
+function getVcapPath(suffixFileName: string): string {
+  return `./test/vcap_services_${suffixFileName}.json`;
 }
 
 function getTestYmlPath(): string {

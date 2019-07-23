@@ -1,0 +1,13 @@
+{
+  "p.config-server": [
+    {
+      "credentials": {
+        "uri": "local.config",
+        "client_secret": "secret",
+        "client_id": "id",
+        "access_token_uri": "local.token"
+      },
+      "name": "test-config"
+    }
+  ]
+}
