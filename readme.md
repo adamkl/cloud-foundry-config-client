@@ -41,7 +41,9 @@ Config.load({
   // optional property to control logging of loaded config to console
   logProperties: true | false | undefined,
   // optional property to control auto-refresh of config based on given interval (seconds)
-  interval: number | undefined
+  interval: number | undefined,
+  label: "master"
+  // consider to master if it's undefined in config; can pass git branch here like develop , feature/config , master etc
 })
 .then(() => { // on successful load, start your application
   const app = express()
@@ -80,7 +82,7 @@ app.use((err, req, res, next) => {
 This is currently a very basic client and as such it enforces some limitations on the usage of the Spring Cloud Config Server.
 
 - This client has only been tested with a git repo backing the config server
-- The client expects configuration yaml files to be stored in the root of the git backing repo with the following file name convention: `{appName}-{profile}.yml //(e.g. myExpressApp-dev.yml)`
+- The client expects configuration yaml files to be stored in the root of the git backing repo with the following file name convention: `{label}/{appName}-{profile}.yml //(e.g. myExpressApp-dev.yml in master branch)`
 
 ## Loading from a local file
 
@@ -142,7 +144,8 @@ Config.load({
   appName: "myExpressApp",
   configLocation: "remote",
   profile: "dev",
-  configServerName: "myConfigServer"
+  configServerName: "myConfigServer",
+  label: "develop"
 })
 ...
 ```

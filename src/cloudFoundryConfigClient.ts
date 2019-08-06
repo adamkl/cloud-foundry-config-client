@@ -152,9 +152,14 @@ export async function loadRemoteSkipAuth(
 }
 
 function getYmlUri(uri: string, appName: string, profile: string, label: string) {
-  let branch = label || "master" // default master in case of not defined
-  branch = branch.replace("/", "(_)"); // feature/common transfrom to feature(_)common
-  return `${uri}/${branch}/${appName}-${profile}.yml`;
+  
+  if (label)
+  {
+    let branch = label.replace("/", "(_)");  // default master in case of not defined
+    return `${uri}/${branch}/${appName}-${profile}.yml`
+  } else {
+    return `${path}/${appName}-${profile}.yml`; 
+  }
 }
 
 
