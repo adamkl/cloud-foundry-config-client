@@ -75,6 +75,7 @@ export interface RemoteLoaderConfig {
   uri: string;
   client_id: string;
   client_secret: string;
+  label: string;
 }
 
 /**
@@ -95,14 +96,15 @@ export async function loadRemote(
     uri,
     access_token_uri,
     client_id,
-    client_secret
+    client_secret,
+    label
   } = config;
   const response = await request.post(access_token_uri, {
     form: { grant_type: "client_credentials", client_id, client_secret }
   });
   const { access_token } = JSON.parse(response);
   const ymlString = await request.get({
-    uri: getYmlUri(uri, appName, profile),
+    uri: getYmlUri(uri, appName, profile,label),
     headers: {
       authorization: `bearer ${access_token}`
     }
@@ -121,6 +123,7 @@ export interface RemoteSkipAuthLoaderConfig {
   appName: string;
   profile: string;
   uri: string;
+  label: string;
 }
 
 /**
@@ -139,17 +142,26 @@ export async function loadRemoteSkipAuth(
   const {
     appName,
     profile,
-    uri
+    uri,
+    label
   } = config;
   const ymlString = await request.get({
-    uri: getYmlUri(uri, appName, profile)
+    uri: getYmlUri(uri, appName, profile,label)
   });
   return yaml.safeLoad(ymlString);
 }
 
-function getYmlUri(uri: string, appName: string, profile: string) {
-  return `${uri}/${appName}-${profile}.yml`;
+function getYmlUri(uri: string, appName: string, profile: string, label: string) {
+  
+  if (label)
+  {
+    let branch = label.replace("/", "(_)");  // default master in case of not defined
+    return `${uri}/${branch}/${appName}-${profile}.yml`
+  } else {
+    return `${uri}/${appName}-${profile}.yml`; 
+  }
 }
+
 
 export type LoaderConfig = LocalLoaderConfig | RemoteLoaderConfig | RemoteSkipAuthLoaderConfig;
 /**
