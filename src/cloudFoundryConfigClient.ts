@@ -158,7 +158,7 @@ function getYmlUri(uri: string, appName: string, profile: string, label: string)
     let branch = label.replace("/", "(_)");  // default master in case of not defined
     return `${uri}/${branch}/${appName}-${profile}.yml`
   } else {
-    return `${path}/${appName}-${profile}.yml`; 
+    return `${uri}/${appName}-${profile}.yml`; 
   }
 }
 
