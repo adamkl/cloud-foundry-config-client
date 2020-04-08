@@ -20,9 +20,10 @@
   version "22.2.3"
   resolved "http://registry.npmjs.org/@types/jest/-/jest-22.2.3.tgz#0157c0316dc3722c43a7b71de3fdf3acbccef10d"
 
-"@types/node@^8":
-  version "8.10.34"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.34.tgz#a94d9f3767fe45f211e09e49af598bb84822280c"
+"@types/node@^13.11.1":
+  version "13.11.1"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-13.11.1.tgz#49a2a83df9d26daacead30d0ccc8762b128d53c7"
+  integrity sha512-eWQGP3qtxwL8FGneRrC5DwrJLGN4/dH1clNTuLfN81HCrxVtxRjygDTUoZJ5ASlDEeo0ppYFQjQIlXhtXpOn6g==
 
 abab@^2.0.0:
   version "2.0.0"
