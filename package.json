@@ -34,7 +34,7 @@
     "request-promise-native": "^1.0.4"
   },
   "devDependencies": {
-    "@types/jest": "^22.1.0",
+    "@types/jest": "^25.2.2",
     "@types/node": "^8",
     "jest": "^22.1.4",
     "ts-jest": "^22.0.1",
