@@ -143,9 +143,9 @@ export async function loadRemoteSkipAuth(
   request = fetch
 ): Promise<any> {
   const {
-    appName, 
-    profile, 
-    uri 
+    appName,
+    profile,
+    uri
   } = config;
   const response = await request(getYmlUri(uri, appName, profile));
   const ymlString = await response.text();
