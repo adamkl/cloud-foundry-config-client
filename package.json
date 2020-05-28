@@ -30,8 +30,7 @@
   },
   "dependencies": {
     "js-yaml": "^3.10.0",
-    "request": "^2.82.0",
-    "request-promise-native": "^1.0.4"
+    "node-fetch": "^2.6.0"
   },
   "devDependencies": {
     "@types/jest": "^22.1.0",

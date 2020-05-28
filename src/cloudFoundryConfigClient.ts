@@ -2,8 +2,9 @@ import * as console from "console";
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
-import * as rp from "request-promise-native";
 import * as util from "util";
+import fetch from "node-fetch";
+import { URLSearchParams } from "url";
 
 const EnvYamlType = new yaml.Type("!env", {
   kind: "scalar",
@@ -82,12 +83,12 @@ export interface RemoteLoaderConfig {
  *
  * @export
  * @param {RemoteLoaderConfig} config object specifying connection details of a Spring Cloud Config Server
- * @param {any} [request=rp] optional request object to use for making calls to config server (defaults to request-promise-native)
+ * @param {any} [request=fetch] optional request object to use for making calls to config server (defaults to node-fetch)
  * @returns {Promise<any>} returns config object parsed from remote yml file
  */
 export async function loadRemote(
   config: RemoteLoaderConfig,
-  request = rp
+  request = fetch
 ): Promise<any> {
   const {
     appName,
@@ -97,16 +98,21 @@ export async function loadRemote(
     client_id,
     client_secret
   } = config;
-  const response = await request.post(access_token_uri, {
-    form: { grant_type: "client_credentials", client_id, client_secret }
+  const params = new URLSearchParams();
+  params.append("grant_type", "client_credentials");
+  params.append("client_id", client_id);
+  params.append("client_secret", client_secret);
+  let response = await request(access_token_uri, {
+    method: "POST",
+    body: params
   });
-  const { access_token } = JSON.parse(response);
-  const ymlString = await request.get({
-    uri: getYmlUri(uri, appName, profile),
+  const { access_token } = await response.json();
+  response = await request(getYmlUri(uri, appName, profile), {
     headers: {
       authorization: `bearer ${access_token}`
     }
   });
+  const ymlString = await response.text();
   return yaml.safeLoad(ymlString);
 }
 
@@ -129,21 +135,20 @@ export interface RemoteSkipAuthLoaderConfig {
  *
  * @export
  * @param {RemoteSkipAuthLoaderConfig} config object specifying connection details of a Spring Cloud Config Server
- * @param {any} [request=rp] optional request object to use for making calls to config server (defaults to request-promise-native)
+ * @param {any} [request=fetch] optional request object to use for making calls to config server (defaults to node-fetch)
  * @returns {Promise<any>} returns config object parsed from remote yml file
  */
 export async function loadRemoteSkipAuth(
   config: RemoteSkipAuthLoaderConfig,
-  request = rp
+  request = fetch
 ): Promise<any> {
   const {
     appName,
     profile,
     uri
   } = config;
-  const ymlString = await request.get({
-    uri: getYmlUri(uri, appName, profile)
-  });
+  const response = await request(getYmlUri(uri, appName, profile));
+  const ymlString = await response.text();
   return yaml.safeLoad(ymlString);
 }
 

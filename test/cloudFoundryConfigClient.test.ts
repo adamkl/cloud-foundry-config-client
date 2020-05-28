@@ -192,20 +192,23 @@ describe("loadRemote", () => {
     client_id: "id",
     client_secret: "secret"
   };
-  const post = jest.fn(async (uri, options) => {
+  const request = jest.fn();
+  request.mockImplementationOnce(async (uri, options) => {
     expect(uri).toEqual(loaderConfig.access_token_uri);
-    const { client_id, client_secret } = options.form;
+    const client_id = options.body.get("client_id");
+    const client_secret = options.body.get("client_secret");
     expect(client_id).toEqual(loaderConfig.client_id);
     expect(client_secret).toEqual(loaderConfig.client_secret);
     return new Promise(resolve => {
-      resolve(`{
-      "access_token": "test_token"
-    }`);
+      resolve({
+        json: () => new Promise(resolve => resolve({
+          "access_token": "test_token"
+        }))
+      });
     });
   });
-  const get = jest.fn(async options => {
+  request.mockImplementationOnce(async (uri, options) => {
     const {
-      uri,
       headers: { authorization }
     } = options;
     expect(uri).toEqual(
@@ -217,13 +220,11 @@ describe("loadRemote", () => {
       "utf8"
     );
     return new Promise(resolve => {
-      resolve(ymlString);
+      resolve({
+        text: () => new Promise(resolve => resolve(ymlString))
+      });
     });
   });
-  const request = {
-    post,
-    get
-  };
   test("posts oauth request and returns config from remote source", async () => {
     const config = await loadRemote(loaderConfig, request);
     expect(config).toEqual({
@@ -242,10 +243,7 @@ describe("loadRemoteSkipAuth", () => {
     profile: "test",
     uri: "http://test.config"
   };
-  const get = jest.fn(async options => {
-    const {
-      uri
-    } = options;
+  const request = jest.fn(async uri => {
     expect(uri).toEqual(
         `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
     );
@@ -254,12 +252,11 @@ describe("loadRemoteSkipAuth", () => {
         "utf8"
     );
     return new Promise(resolve => {
-      resolve(ymlString);
+      resolve({ 
+        text: () => new Promise(resolve => resolve(ymlString)) 
+      });
     });
   });
-  const request = {
-    get
-  };
   test("returns config from remote source skipping the authentication step", async () => {
     const config = await loadRemoteSkipAuth(loaderConfig, request);
     expect(config).toEqual({
