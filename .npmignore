@@ -7,3 +7,5 @@ tsconfig.json
 .npmrc
 .travis.yml
 .vscode
+yarn-error.log
+test-config/
