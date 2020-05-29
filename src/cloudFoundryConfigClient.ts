@@ -8,9 +8,9 @@ import { URLSearchParams } from "url";
 
 const EnvYamlType = new yaml.Type("!env", {
   kind: "scalar",
-  construct: function(string) {
+  construct: function (string) {
     return process.env[string];
-  }
+  },
 });
 
 const SchemaWithEnv = yaml.Schema.create([EnvYamlType]);
@@ -24,7 +24,7 @@ const SchemaWithEnv = yaml.Schema.create([EnvYamlType]);
  * @returns
  */
 export function loadVcapServices(
-  vcap_services: string | undefined,
+  vcap_services: string | undefined | null,
   vcaplocalPath = "./vcap_services.json"
 ) {
   if (vcap_services) {
@@ -96,7 +96,7 @@ export async function loadRemote(
     uri,
     access_token_uri,
     client_id,
-    client_secret
+    client_secret,
   } = config;
   const params = new URLSearchParams();
   params.append("grant_type", "client_credentials");
@@ -104,13 +104,13 @@ export async function loadRemote(
   params.append("client_secret", client_secret);
   let response = await request(access_token_uri, {
     method: "POST",
-    body: params
+    body: params,
   });
   const { access_token } = await response.json();
   response = await request(getYmlUri(uri, appName, profile), {
     headers: {
-      authorization: `bearer ${access_token}`
-    }
+      authorization: `bearer ${access_token}`,
+    },
   });
   const ymlString = await response.text();
   return yaml.safeLoad(ymlString);
@@ -142,11 +142,7 @@ export async function loadRemoteSkipAuth(
   config: RemoteSkipAuthLoaderConfig,
   request = fetch
 ): Promise<any> {
-  const {
-    appName,
-    profile,
-    uri
-  } = config;
+  const { appName, profile, uri } = config;
   const response = await request(getYmlUri(uri, appName, profile));
   const ymlString = await response.text();
   return yaml.safeLoad(ymlString);
@@ -156,7 +152,10 @@ function getYmlUri(uri: string, appName: string, profile: string) {
   return `${uri}/${appName}-${profile}.yml`;
 }
 
-export type LoaderConfig = LocalLoaderConfig | RemoteLoaderConfig | RemoteSkipAuthLoaderConfig;
+export type LoaderConfig =
+  | LocalLoaderConfig
+  | RemoteLoaderConfig
+  | RemoteSkipAuthLoaderConfig;
 /**
  * Tests to see if provided LoaderConfig is a LocalLoaderConfig
  *
@@ -180,9 +179,11 @@ export function isLocalConfig(
 export function isRemoteConfig(
   config: LoaderConfig
 ): config is RemoteLoaderConfig {
-  return (<RemoteLoaderConfig>config).access_token_uri !== undefined
-      && (<RemoteLoaderConfig>config).client_id !== undefined
-      && (<RemoteLoaderConfig>config).client_secret !== undefined;
+  return (
+    (<RemoteLoaderConfig>config).access_token_uri !== undefined &&
+    (<RemoteLoaderConfig>config).client_id !== undefined &&
+    (<RemoteLoaderConfig>config).client_secret !== undefined
+  );
 }
 
 /**
@@ -209,14 +210,14 @@ export async function load(
   } else if (isRemoteConfig(config)) {
     appConfig = await loadRemoteFunc(config);
   } else {
-    appConfig = await loadRemoteSkipAuthFunc(config)
+    appConfig = await loadRemoteSkipAuthFunc(config);
   }
   const {
     appName,
     configServerName,
     configLocation,
     profile,
-    logProperties
+    logProperties,
   } = params;
   console.debug(
     `Settings loaded from ${configLocation} ${configServerName} for ${appName}-${profile}`
@@ -247,29 +248,35 @@ export function getLoaderConfig(
   let loaderConfig: LoaderConfig;
   if (configLocation === "remote") {
     const vcap_services = loadVcapServicesFunc(process.env.VCAP_SERVICES);
-    const configServerServiceName =
-        configServerServiceNameValues.find(configServerServiceName => vcap_services.hasOwnProperty(configServerServiceName));
+    const configServerServiceName = configServerServiceNameValues.find(
+      (configServerServiceName) =>
+        vcap_services.hasOwnProperty(configServerServiceName)
+    );
     if (!configServerServiceName) {
-      throw new Error(`Either ${configServerServiceNameValues.join(" or ")} must be defined on VCAP_SERVICES`);
+      throw new Error(
+        `Either ${configServerServiceNameValues.join(
+          " or "
+        )} must be defined on VCAP_SERVICES`
+      );
     }
     const { credentials } = vcap_services[`${configServerServiceName}`].find(
-        cfg => cfg.name === configServerName
+      (cfg) => cfg.name === configServerName
     );
     loaderConfig = {
       appName,
       profile,
-      ...credentials
+      ...credentials,
     } as RemoteLoaderConfig;
   } else if (configLocation == "remoteSkipAuth") {
     const uri = process.env.CONFIG_SERVER_URI_WHEN_SKIP_AUTH;
     loaderConfig = {
       appName,
       profile,
-      uri
+      uri,
     } as RemoteSkipAuthLoaderConfig;
   } else {
     loaderConfig = {
-      path: `./${configServerName}/${appName}-${profile}.yml`
+      path: `./${configServerName}/${appName}-${profile}.yml`,
     } as LocalLoaderConfig;
   }
   return loaderConfig;
@@ -352,7 +359,7 @@ export class Config {
    */
   public static async load(params: ConfigParams): Promise<void> {
     const config = getLoaderConfig(params);
-    await loadAndRepeat(config, params, loadedConfig => {
+    await loadAndRepeat(config, params, (loadedConfig) => {
       this.current = loadedConfig;
     });
   }
