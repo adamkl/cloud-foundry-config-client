@@ -4,8 +4,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 import * as console from "console";
+import * as nock from "nock";
 
-jest.useFakeTimers();
+// jest.useFakeTimers();
 jest.mock("console", () => {
   return { debug: jest.fn() };
 });
@@ -35,10 +36,15 @@ beforeEach(() => {
   (console as any).debug.mockClear();
 });
 
+describe("node-fetch", () => {});
+
 describe("loadVcapServices", () => {
   test("loads local file if vcap_services is undefined", () => {
-    const vcap_services: string = undefined;
-    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
+    const vcap_services: string | undefined = undefined;
+    const output = loadVcapServices(
+      vcap_services,
+      getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN)
+    );
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -46,17 +52,20 @@ describe("loadVcapServices", () => {
             uri: "local.config",
             client_secret: "secret",
             client_id: "id",
-            access_token_uri: "local.token"
+            access_token_uri: "local.token",
           },
-          name: "test-config"
-        }
-      ]
+          name: "test-config",
+        },
+      ],
     });
   });
 
   test("loads local file if vcap_services is null", () => {
-    const vcap_services: string = null;
-    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
+    const vcap_services: string | null = null;
+    const output = loadVcapServices(
+      vcap_services,
+      getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN)
+    );
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -64,17 +73,20 @@ describe("loadVcapServices", () => {
             uri: "local.config",
             client_secret: "secret",
             client_id: "id",
-            access_token_uri: "local.token"
+            access_token_uri: "local.token",
           },
-          name: "test-config"
-        }
-      ]
+          name: "test-config",
+        },
+      ],
     });
   });
 
   test("loads local file if vcap_services is empty", () => {
     const vcap_services: string = "";
-    const output = loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
+    const output = loadVcapServices(
+      vcap_services,
+      getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN)
+    );
     expect(output).toEqual({
       "p-config-server": [
         {
@@ -82,11 +94,11 @@ describe("loadVcapServices", () => {
             uri: "local.config",
             client_secret: "secret",
             client_id: "id",
-            access_token_uri: "local.token"
+            access_token_uri: "local.token",
           },
-          name: "test-config"
-        }
-      ]
+          name: "test-config",
+        },
+      ],
     });
   });
 
@@ -112,11 +124,11 @@ describe("loadVcapServices", () => {
             uri: "process.env.config",
             client_secret: "secret",
             client_id: "id",
-            access_token_uri: "process.env.token"
+            access_token_uri: "process.env.token",
           },
-          name: "test-config"
-        }
-      ]
+          name: "test-config",
+        },
+      ],
     });
   });
 });
@@ -124,11 +136,12 @@ describe("loadVcapServices", () => {
 describe("isLocalConfig", () => {
   test("returns true if LoaderConfig is LocalLoaderConfig", () => {
     const loaderConfig: LocalLoaderConfig = {
-      path: "./testApp-test.yml"
+      path: "./testApp-test.yml",
     };
     const output = isLocalConfig(loaderConfig);
     expect(output).toBe(true);
   });
+
   test("returns false if LoaderConfig is not LocalLoaderConfig", () => {
     const loaderConfig: RemoteLoaderConfig = {
       appName: "testApp",
@@ -136,7 +149,7 @@ describe("isLocalConfig", () => {
       uri: "http://test.config",
       access_token_uri: "http://test.token",
       client_id: "id",
-      client_secret: "secret"
+      client_secret: "secret",
     };
     const output = isLocalConfig(loaderConfig);
     expect(output).toBe(false);
@@ -151,14 +164,15 @@ describe("isRemoteConfig", () => {
       uri: "http://test.config",
       access_token_uri: "http://test.token",
       client_id: "id",
-      client_secret: "secret"
+      client_secret: "secret",
     };
     const output = isRemoteConfig(loaderConfig);
     expect(output).toBe(true);
   });
+
   test("returns false if LoaderConfig is not RemoteLoaderConfig", () => {
     const loaderConfig: LocalLoaderConfig = {
-      path: "./testApp-test.yml"
+      path: "./testApp-test.yml",
     };
     const output = isRemoteConfig(loaderConfig);
     expect(output).toBe(false);
@@ -172,10 +186,11 @@ describe("loadLocal", () => {
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     });
   });
+
   test("throws exception if local file is missing", async () => {
     await expect(
       loadLocal({ path: "./missing/testApp-test.yml" })
@@ -190,23 +205,30 @@ describe("loadRemote", () => {
     uri: "http://test.config",
     access_token_uri: "http://test.token",
     client_id: "id",
-    client_secret: "secret"
+    client_secret: "secret",
   };
-  const post = jest.fn(async (uri, options) => {
+  const request = jest.fn();
+  request.mockImplementationOnce(async (uri, options) => {
     expect(uri).toEqual(loaderConfig.access_token_uri);
-    const { client_id, client_secret } = options.form;
+    const client_id = options.body.get("client_id");
+    const client_secret = options.body.get("client_secret");
     expect(client_id).toEqual(loaderConfig.client_id);
     expect(client_secret).toEqual(loaderConfig.client_secret);
-    return new Promise(resolve => {
-      resolve(`{
-      "access_token": "test_token"
-    }`);
+    return new Promise((resolve) => {
+      resolve({
+        json: () =>
+          new Promise((resolve) =>
+            resolve({
+              access_token: "test_token",
+            })
+          ),
+      });
     });
   });
-  const get = jest.fn(async options => {
+
+  request.mockImplementationOnce(async (uri, options) => {
     const {
-      uri,
-      headers: { authorization }
+      headers: { authorization },
     } = options;
     expect(uri).toEqual(
       `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
@@ -216,22 +238,21 @@ describe("loadRemote", () => {
       path.resolve(process.cwd(), getTestYmlPath()),
       "utf8"
     );
-    return new Promise(resolve => {
-      resolve(ymlString);
+    return new Promise((resolve) => {
+      resolve({
+        text: () => new Promise((resolve) => resolve(ymlString)),
+      });
     });
   });
-  const request = {
-    post,
-    get
-  };
+
   test("posts oauth request and returns config from remote source", async () => {
     const config = await loadRemote(loaderConfig, request);
     expect(config).toEqual({
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     });
   });
 });
@@ -240,34 +261,32 @@ describe("loadRemoteSkipAuth", () => {
   const loaderConfig: RemoteSkipAuthLoaderConfig = {
     appName: "testApp",
     profile: "test",
-    uri: "http://test.config"
+    uri: "http://test.config",
   };
-  const get = jest.fn(async options => {
-    const {
-      uri
-    } = options;
+
+  const request = jest.fn(async (uri) => {
     expect(uri).toEqual(
-        `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
+      `${loaderConfig.uri}/${loaderConfig.appName}-${loaderConfig.profile}.yml`
     );
     const ymlString = fs.readFileSync(
-        path.resolve(process.cwd(), getTestYmlPath()),
-        "utf8"
+      path.resolve(process.cwd(), getTestYmlPath()),
+      "utf8"
     );
-    return new Promise(resolve => {
-      resolve(ymlString);
+    return new Promise((resolve) => {
+      resolve({
+        text: () => new Promise((resolve) => resolve(ymlString)),
+      });
     });
   });
-  const request = {
-    get
-  };
+
   test("returns config from remote source skipping the authentication step", async () => {
     const config = await loadRemoteSkipAuth(loaderConfig, request);
     expect(config).toEqual({
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     });
   });
 });
@@ -282,44 +301,44 @@ describe("loadAndRepeat", () => {
     expect(updateFunc).toBeCalled();
     expect(updateFunc).toHaveBeenCalledTimes(1);
   });
-  test("calls updateFunc 5 times", async () => {
+
+  test("calls updateFunc 4 times", async () => {
     const updateFunc = jest.fn();
     const loadLocalFunc = jest.fn();
     const loaderConfig = { path: getTestYmlPath() };
     const params = { interval: 1 } as any;
     await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
-    for (let i = 0; i < 4; i++) {
-      jest.advanceTimersByTime(1000);
-      await Promise.resolve();
-    }
+
+    await new Promise((resolve) => setTimeout(resolve, 3200));
+
     expect(console.debug).toHaveBeenCalledWith(
       `set to auto-refresh config with interval of ${params.interval} seconds`
     );
     expect(console.debug).toHaveBeenCalledWith(
       `auto-refreshing config after waiting ${params.interval} seconds`
     );
-    expect(updateFunc).toHaveBeenCalledTimes(5);
+    expect(updateFunc).toHaveBeenCalledTimes(4);
   });
 
   test("updates config on interval", async () => {
     let current = undefined;
-    const updateFunc = jest.fn(newConfig => {
+    const updateFunc = jest.fn((newConfig) => {
       current = newConfig;
     });
     const loadedConfig1 = {
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     };
     const loadedConfig2 = {
       "test-app": {
         host: "www.test.com",
         port: "443",
         ssl: "true",
-        newFeature1: true
-      }
+        newFeature1: true,
+      },
     };
 
     const loadLocalFunc = jest.fn();
@@ -333,23 +352,22 @@ describe("loadAndRepeat", () => {
 
     expect(current).toEqual(loadedConfig1);
 
-    jest.advanceTimersByTime(1000);
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 1100));
 
     expect(current).toEqual(loadedConfig2);
   });
 
   test("logs error on refresh; uses previous config", async () => {
     let current = undefined;
-    const updateFunc = jest.fn(newConfig => {
+    const updateFunc = jest.fn((newConfig) => {
       current = newConfig;
     });
     const loadedConfig = {
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     };
     const error = new Error("error loading local config");
     const loadLocalFunc = jest.fn();
@@ -358,10 +376,9 @@ describe("loadAndRepeat", () => {
     const loaderConfig = { path: getTestYmlPath() };
     const params = { interval: 1 } as any;
     await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
-    for (let i = 0; i < 4; i++) {
-      jest.advanceTimersByTime(1000);
-      await Promise.resolve();
-    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+
     expect(console.debug).toHaveBeenCalledWith(
       `Problem encountered while refreshing config; using previous config: ${error}`
     );
@@ -371,54 +388,69 @@ describe("loadAndRepeat", () => {
 
 describe("load", () => {
   test("calls loadLocal", async () => {
-    const loadLocalFunc = jest.fn(config => {});
+    const loadLocalFunc = jest.fn((config) => {});
     const loaderConfig = { path: getTestYmlPath() };
-    const config = await load(loaderConfig, {} as any, loadLocalFunc);
+    const config = await load(loaderConfig, {} as any, loadLocalFunc as any);
     expect(loadLocalFunc).toBeCalledWith(loaderConfig);
   });
+
   test("calls loadRemote", async () => {
-    const loadRemoteFunc = jest.fn(config => {});
+    const loadRemoteFunc = jest.fn((config) => {});
     const loaderConfig: RemoteLoaderConfig = {
       appName: "testApp",
       profile: "test",
       uri: "http://test.config",
       access_token_uri: "http://test.token",
       client_id: "id",
-      client_secret: "secret"
+      client_secret: "secret",
     };
-    const config = await load(loaderConfig, {} as any, null, loadRemoteFunc);
+    const config = await load(
+      loaderConfig,
+      {} as any,
+      undefined,
+      loadRemoteFunc as any
+    );
     expect(loadRemoteFunc).toBeCalledWith(loaderConfig);
   });
+
   test("calls loadRemoteSkipAuth", async () => {
-    const loadRemoteSkipAuthFunc = jest.fn(config => {});
+    const loadRemoteSkipAuthFunc = jest.fn((config) => {});
     const loaderConfig: RemoteSkipAuthLoaderConfig = {
       appName: "testApp",
       profile: "test",
-      uri: "http://test.config"
+      uri: "http://test.config",
     };
-    const config = await load(loaderConfig, {} as any, null, null, loadRemoteSkipAuthFunc);
+    const config = await load(
+      loaderConfig,
+      {} as any,
+      undefined,
+      undefined,
+      loadRemoteSkipAuthFunc as any
+    );
     expect(loadRemoteSkipAuthFunc).toBeCalledWith(loaderConfig);
   });
+
   describe("with logging off", () => {
     test("does not log to console", async () => {
-      const loadLocalFunc = jest.fn(config => {});
+      const loadLocalFunc = jest.fn((config) => {});
       const loaderConfig = { path: getTestYmlPath() };
       const config = await load(
         loaderConfig,
         { logProperties: false } as any,
-        loadLocalFunc
+        loadLocalFunc as any
       );
       expect(console.debug).toHaveBeenCalledTimes(1);
     });
   });
+
   describe("with logging on", () => {
     test("does log to console", async () => {
-      const loadLocalFunc = jest.fn(config => {});
+      const loadLocalFunc = jest.fn((config) => {});
       const loaderConfig = { path: getTestYmlPath() };
       const config = await load(
         loaderConfig,
         { logProperties: true } as any,
-        loadLocalFunc
+        loadLocalFunc as any
       );
       expect(console.debug).toHaveBeenCalledTimes(3);
     });
@@ -426,15 +458,19 @@ describe("load", () => {
 });
 
 describe("getLoaderConfig", () => {
-  const loadVcapServicesFunc = vcap_services => {
-    return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN));
+  const loadVcapServicesFunc = (vcap_services) => {
+    return loadVcapServices(
+      vcap_services,
+      getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_HYPHEN)
+    );
   };
+
   test("returns LocalLoaderConfig", async () => {
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "local"
+      configLocation: "local",
     };
     const loaderConfig = await getLoaderConfig(
       configParams,
@@ -442,17 +478,16 @@ describe("getLoaderConfig", () => {
     );
     const { path } = <LocalLoaderConfig>loaderConfig;
     expect(path).toEqual(
-      `./${configParams.configServerName}/${configParams.appName}-${
-        configParams.profile
-      }.yml`
+      `./${configParams.configServerName}/${configParams.appName}-${configParams.profile}.yml`
     );
   });
+
   test(`returns RemoteLoaderConfig with vcap_services_${P_CONFIG_SERVER_SERVICE_NAME_HYPHEN}.json`, async () => {
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "remote"
+      configLocation: "remote",
     };
     const loaderConfig = await getLoaderConfig(
       configParams,
@@ -464,7 +499,7 @@ describe("getLoaderConfig", () => {
       uri,
       access_token_uri,
       client_id,
-      client_secret
+      client_secret,
     } = <RemoteLoaderConfig>loaderConfig;
     expect(appName).toEqual(configParams.appName);
     expect(profile).toEqual(configParams.profile);
@@ -473,36 +508,37 @@ describe("getLoaderConfig", () => {
     expect(client_id).toEqual("id");
     expect(client_secret).toEqual("secret");
   });
+
   test("returns RemoteSkipAuthLoaderConfig", async () => {
-    process.env['CONFIG_SERVER_URI_WHEN_SKIP_AUTH'] = 'http://localhost:8888';
+    process.env["CONFIG_SERVER_URI_WHEN_SKIP_AUTH"] = "http://localhost:8888";
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "remoteSkipAuth"
+      configLocation: "remoteSkipAuth",
     };
     const loaderConfig = await getLoaderConfig(
-        configParams,
-        loadVcapServicesFunc
+      configParams,
+      loadVcapServicesFunc
     );
-    const {
-      appName,
-      profile,
-      uri
-    } = <RemoteSkipAuthLoaderConfig>loaderConfig;
+    const { appName, profile, uri } = <RemoteSkipAuthLoaderConfig>loaderConfig;
     expect(appName).toEqual(configParams.appName);
     expect(profile).toEqual(configParams.profile);
     expect(uri).toEqual("http://localhost:8888");
   });
+
   test(`returns RemoteLoaderConfig with vcap_services_${P_CONFIG_SERVER_SERVICE_NAME_DOT}.json`, async () => {
-    const loadVcapServicesFuncWithDot = vcap_services => {
-      return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_DOT));
+    const loadVcapServicesFuncWithDot = (vcap_services) => {
+      return loadVcapServices(
+        vcap_services,
+        getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_DOT)
+      );
     };
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "remote"
+      configLocation: "remote",
     };
     const loaderConfig = await getLoaderConfig(
       configParams,
@@ -514,7 +550,7 @@ describe("getLoaderConfig", () => {
       uri,
       access_token_uri,
       client_id,
-      client_secret
+      client_secret,
     } = <RemoteLoaderConfig>loaderConfig;
     expect(appName).toEqual(configParams.appName);
     expect(profile).toEqual(configParams.profile);
@@ -523,27 +559,31 @@ describe("getLoaderConfig", () => {
     expect(client_id).toEqual("id");
     expect(client_secret).toEqual("secret");
   });
+
   test("throws an exception instead of a RemoteLoaderConfig with an invalid vcap_services", async () => {
-    const loadVcapServicesFuncInvalid = vcap_services => {
-      return loadVcapServices(vcap_services, getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_INVALID));
+    const loadVcapServicesFuncInvalid = (vcap_services) => {
+      return loadVcapServices(
+        vcap_services,
+        getVcapPath(P_CONFIG_SERVER_SERVICE_NAME_INVALID)
+      );
     };
     const configParams: ConfigParams = {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "remote"
+      configLocation: "remote",
     };
     let error;
     try {
-      await getLoaderConfig(
-        configParams,
-        loadVcapServicesFuncInvalid
-      );
+      await getLoaderConfig(configParams, loadVcapServicesFuncInvalid);
     } catch (e) {
       error = e;
     }
     expect(error).toEqual(
-        new Error(`Either ${P_CONFIG_SERVER_SERVICE_NAME_HYPHEN} or ${P_CONFIG_SERVER_SERVICE_NAME_DOT} must be defined on VCAP_SERVICES`));
+      new Error(
+        `Either ${P_CONFIG_SERVER_SERVICE_NAME_HYPHEN} or ${P_CONFIG_SERVER_SERVICE_NAME_DOT} must be defined on VCAP_SERVICES`
+      )
+    );
   });
 });
 
@@ -553,7 +593,7 @@ describe("Config.load", () => {
       appName: "testApp",
       profile: "test",
       configServerName: "test-config",
-      configLocation: "local"
+      configLocation: "local",
     };
 
     await Config.load(configParams);
@@ -562,9 +602,52 @@ describe("Config.load", () => {
       "test-app": {
         host: "www.test.com",
         port: "443",
-        ssl: "true"
-      }
+        ssl: "true",
+      },
     });
+  });
+
+  test("remote e2e-ish", async () => {
+    process.env.VCAP_SERVICES = JSON.stringify({
+      "p.config-server": [
+        {
+          credentials: {
+            uri: "https://local.config",
+            client_secret: "secret",
+            client_id: "id",
+            access_token_uri: "https://local.token",
+          },
+          name: "test-config",
+        },
+      ],
+    });
+
+    const configParams: ConfigParams = {
+      appName: "testApp",
+      profile: "test",
+      configServerName: "test-config",
+      configLocation: "remote",
+    };
+
+    const token_scope = nock("https://local.token").post("/").reply(200, {
+      access_token: "1234",
+    });
+
+    const config_scope = nock("https://local.config")
+      .get(`/${configParams.appName}-${configParams.profile}.yml`)
+      .replyWithFile(200, path.resolve(process.cwd(), getTestYmlPath()));
+
+    await Config.load(configParams);
+
+    expect(Config.current).toEqual({
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true",
+      },
+    });
+
+    process.env.VCAP_SERVICES = undefined;
   });
 });
 
