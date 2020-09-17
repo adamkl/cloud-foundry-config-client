@@ -1,6 +1,6 @@
 {
   "name": "cloud-foundry-config-client",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A basic cloud foundry config client for Node.js",
   "main": "./lib/cloudFoundryConfigClient.js",
   "types": "./lib/cloudFoundryConfigClient.d.ts",
