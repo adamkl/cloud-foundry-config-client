@@ -11,6 +11,8 @@ jest.mock("console", () => {
   return { debug: jest.fn() };
 });
 
+jest.mock('events');
+
 import {
   Config,
   ConfigParams,
@@ -27,6 +29,8 @@ import {
   RemoteLoaderConfig,
   RemoteSkipAuthLoaderConfig,
 } from "../src/cloudFoundryConfigClient";
+import { EventEmitter } from "events";
+// import events from "../__mocks__/events";
 
 const P_CONFIG_SERVER_SERVICE_NAME_HYPHEN = "p-config-server";
 const P_CONFIG_SERVER_SERVICE_NAME_DOT = "p.config-server";
@@ -292,22 +296,27 @@ describe("loadRemoteSkipAuth", () => {
 });
 
 describe("loadAndRepeat", () => {
-  test("calls updateFunc once", async () => {
+  test("calls updateFunc once and fire load event once", async () => {
     const updateFunc = jest.fn();
     const loadLocalFunc = jest.fn();
+    const configEvents = new EventEmitter();
     const loaderConfig = { path: getTestYmlPath() };
     const params = {} as any;
-    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    await loadAndRepeat(loaderConfig, params, configEvents, updateFunc, loadLocalFunc);
     expect(updateFunc).toBeCalled();
     expect(updateFunc).toHaveBeenCalledTimes(1);
+    expect(configEvents.emit).toHaveBeenNthCalledWith(1, 'load');
+    expect(configEvents.emit).not.toHaveBeenNthCalledWith(1, 'refresh');
+
   });
 
-  test("calls updateFunc 4 times", async () => {
+  test("calls updateFunc 4 times and fire load event once and refresh event 3 times", async () => {
     const updateFunc = jest.fn();
     const loadLocalFunc = jest.fn();
+    const configEvents = new EventEmitter();
     const loaderConfig = { path: getTestYmlPath() };
     const params = { interval: 1 } as any;
-    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    await loadAndRepeat(loaderConfig, params, configEvents, updateFunc, loadLocalFunc);
 
     await new Promise((resolve) => setTimeout(resolve, 3200));
 
@@ -318,10 +327,16 @@ describe("loadAndRepeat", () => {
       `auto-refreshing config after waiting ${params.interval} seconds`
     );
     expect(updateFunc).toHaveBeenCalledTimes(4);
+    expect(configEvents.emit).toHaveBeenNthCalledWith(1, 'load');
+    expect(configEvents.emit).toHaveBeenNthCalledWith(2, 'refresh');
+    expect(configEvents.emit).toHaveBeenNthCalledWith(3, 'refresh');
+    expect(configEvents.emit).toHaveBeenNthCalledWith(4, 'refresh');
   });
 
   test("updates config on interval", async () => {
     let current = undefined;
+
+    const configEvents = new EventEmitter();
     const updateFunc = jest.fn((newConfig) => {
       current = newConfig;
     });
@@ -348,7 +363,7 @@ describe("loadAndRepeat", () => {
 
     const loaderConfig = { path: getTestYmlPath() };
     const params = { interval: 1 } as any;
-    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    await loadAndRepeat(loaderConfig, params, configEvents, updateFunc, loadLocalFunc);
 
     expect(current).toEqual(loadedConfig1);
 
@@ -357,8 +372,51 @@ describe("loadAndRepeat", () => {
     expect(current).toEqual(loadedConfig2);
   });
 
-  test("logs error on refresh; uses previous config", async () => {
+  test("emits change event on update config interval", async () => {
     let current = undefined;
+    
+    const configEvents = new EventEmitter();
+    const updateFunc = jest.fn((newConfig) => {
+      current = newConfig;
+    });
+    const loadedConfig1 = {
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true",
+      },
+    };
+    const loadedConfig2 = {
+      "test-app": {
+        host: "www.test.com",
+        port: "443",
+        ssl: "true",
+        newFeature1: true,
+      },
+    };
+
+    const loadLocalFunc = jest.fn();
+    loadLocalFunc
+      .mockReturnValueOnce(loadedConfig1)
+      .mockReturnValue(loadedConfig2);
+
+    const loaderConfig = { path: getTestYmlPath() };
+    const params = { interval: 1 } as any;
+    await loadAndRepeat(loaderConfig, params, configEvents, updateFunc, loadLocalFunc);
+
+    expect(current).toEqual(loadedConfig1);
+    expect(configEvents.emit).toHaveBeenNthCalledWith(1, 'load');
+
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+
+    expect(current).toEqual(loadedConfig2);
+    expect(configEvents.emit).toHaveBeenNthCalledWith(2, 'refresh');
+  });
+
+  test("logs error on refresh; uses previous config and does not emit refresh event", async () => {
+    let current = undefined;
+
+    const configEvents = new EventEmitter();
     const updateFunc = jest.fn((newConfig) => {
       current = newConfig;
     });
@@ -375,7 +433,7 @@ describe("loadAndRepeat", () => {
 
     const loaderConfig = { path: getTestYmlPath() };
     const params = { interval: 1 } as any;
-    await loadAndRepeat(loaderConfig, params, updateFunc, loadLocalFunc);
+    await loadAndRepeat(loaderConfig, params, configEvents, updateFunc, loadLocalFunc);
 
     await new Promise((resolve) => setTimeout(resolve, 1100));
 
@@ -383,6 +441,8 @@ describe("loadAndRepeat", () => {
       `Problem encountered while refreshing config; using previous config: ${error}`
     );
     expect(current).toEqual(loadedConfig);
+    expect(configEvents.emit).toHaveBeenNthCalledWith(1, 'load');
+    expect(configEvents.emit).not.toHaveBeenNthCalledWith(2, 'refresh');
   });
 });
 
