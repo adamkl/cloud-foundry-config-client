@@ -5,6 +5,7 @@ import * as path from "path";
 import * as util from "util";
 import fetch from "node-fetch";
 import { URLSearchParams } from "url";
+import { EventEmitter } from "events";
 
 const EnvYamlType = new yaml.Type("!env", {
   kind: "scalar",
@@ -293,12 +294,14 @@ export function getLoaderConfig(
 export async function loadAndRepeat(
   config,
   params,
+  configEvents,
   updateFunc,
   loadLocalFunc = loadLocal,
   loadRemoteFunc = loadRemote
 ) {
   updateFunc(await load(config, params, loadLocalFunc, loadRemoteFunc));
-
+  configEvents.emit('load');
+  console.debug('load event emitted');
   const { interval } = params;
   if (interval) {
     console.debug(
@@ -310,6 +313,8 @@ export async function loadAndRepeat(
           `auto-refreshing config after waiting ${interval} seconds`
         );
         updateFunc(await load(config, params, loadLocalFunc, loadRemoteFunc));
+        configEvents.emit('refresh')
+        console.debug('refresh event emitted')
       } catch (err) {
         console.debug(
           `Problem encountered while refreshing config; using previous config: ${err}`
@@ -349,6 +354,7 @@ export class Config {
    * @memberof Config
    */
   public static current: any;
+  public static configEvents: EventEmitter = new EventEmitter();
   /**
    * loads the app config *must be called during the start of the application*
    *
@@ -359,7 +365,7 @@ export class Config {
    */
   public static async load(params: ConfigParams): Promise<void> {
     const config = getLoaderConfig(params);
-    await loadAndRepeat(config, params, (loadedConfig) => {
+    await loadAndRepeat(config, params, this.configEvents, (loadedConfig) => {
       this.current = loadedConfig;
     });
   }
